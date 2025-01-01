@@ -4,13 +4,13 @@ uvicorn==0.15.0
 starlette==0.16.0
 
 # API Clients
-openai==0.28.1
+openai==0.27.8
 youtube-search-python==1.6.6
-yt-dlp==2023.11.16
+yt-dlp==2023.3.4
 
 # Utils
-python-dotenv==1.0.0
-requests==2.28.2
+python-dotenv==0.19.2
+requests==2.27.1
 pydub==0.25.1
 
 # Core Dependencies
@@ -18,7 +18,7 @@ pydantic==1.8.2
 typing-extensions==3.10.0.2
 
 # LangChain
-langchain==0.0.284
+langchain==0.0.200
 
 # Redis
-redis==5.0.1
+redis==4.5.5
