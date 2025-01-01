@@ -1,5 +1,7 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import os
 import uuid
@@ -30,6 +32,8 @@ app.add_middleware(
 
 # Redis 连接
 redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
+redis_client = None
+
 try:
     url = urlparse(redis_url)
     redis_client = redis.Redis(
@@ -45,21 +49,39 @@ try:
     logger.info("Redis connection successful")
 except Exception as e:
     logger.error(f"Redis connection error: {str(e)}")
-    if os.getenv('VERCEL_ENV') == 'production':
-        raise
+    # 在开发环境中继续运行
+    if os.getenv('VERCEL_ENV') != 'production':
+        redis_client = None
 
 class ProcessRequest(BaseModel):
     topic: str
     mode: str = "1"
 
-@app.get("/api")
+# 静态文件服务
+try:
+    app.mount("/static", StaticFiles(directory="src/static"), name="static")
+except Exception as e:
+    logger.error(f"Failed to mount static files: {str(e)}")
+
+@app.get("/")
 async def read_root():
-    """API 状态检查"""
+    """提供前端页面"""
     try:
-        redis_client.ping()
-        redis_status = "connected"
+        return FileResponse('src/static/index.html')
+    except Exception as e:
+        logger.error(f"Failed to serve index.html: {str(e)}")
+        return {"status": "error", "message": "无法加载页面"}
+
+@app.get("/api")
+async def check_api():
+    """API 状态检查"""
+    redis_status = "disconnected"
+    try:
+        if redis_client:
+            redis_client.ping()
+            redis_status = "connected"
     except:
-        redis_status = "disconnected"
+        pass
     
     return {
         "status": "ok",
@@ -69,6 +91,10 @@ async def read_root():
 
 async def process_task(task_id: str, request: ProcessRequest):
     """后台任务处理"""
+    if not redis_client:
+        logger.error("Redis client not available")
+        return
+        
     try:
         # 更新任务状态为处理中
         task_data = {
@@ -101,13 +127,17 @@ async def process_task(task_id: str, request: ProcessRequest):
         }
     finally:
         try:
-            redis_client.setex(f"task:{task_id}", 3600, json.dumps(task_data))
+            if redis_client:
+                redis_client.setex(f"task:{task_id}", 3600, json.dumps(task_data))
         except Exception as e:
             logger.error(f"Failed to update task status: {str(e)}")
 
 @app.post("/api/process")
 async def process_video(request: ProcessRequest, background_tasks: BackgroundTasks):
     """处理视频接口"""
+    if not redis_client:
+        raise HTTPException(status_code=503, detail="Redis 服务不可用")
+        
     try:
         task_id = str(uuid.uuid4())
         task_data = {
@@ -133,6 +163,9 @@ async def process_video(request: ProcessRequest, background_tasks: BackgroundTas
 @app.get("/api/status/{task_id}")
 async def get_task_status(task_id: str):
     """获取任务状态"""
+    if not redis_client:
+        raise HTTPException(status_code=503, detail="Redis 服务不可用")
+        
     try:
         task_data = redis_client.get(f"task:{task_id}")
         if not task_data:
