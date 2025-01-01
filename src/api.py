@@ -10,15 +10,6 @@ import logging
 import traceback
 from pathlib import Path
 
-# 添加 src 目录到 Python 路径
-current_dir = Path(__file__).parent
-if str(current_dir) not in sys.path:
-    sys.path.append(str(current_dir))
-
-from workflow_processor import WorkflowProcessor
-import redis
-from urllib.parse import urlparse
-
 # 配置日志
 logging.basicConfig(
     level=logging.INFO,
@@ -26,10 +17,36 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# 记录 Python 路径
-logger.info(f"Python path: {sys.path}")
+# 记录环境信息
+logger.info(f"Current file: {__file__}")
 logger.info(f"Current directory: {os.getcwd()}")
-logger.info(f"Directory contents: {os.listdir('.')}")
+logger.info(f"Directory contents: {os.listdir(os.getcwd())}")
+logger.info(f"Python path: {sys.path}")
+
+# 添加当前目录到 Python 路径
+current_file = Path(__file__)
+current_dir = current_file.parent
+project_root = current_dir.parent
+sys.path.extend([str(current_dir), str(project_root)])
+
+logger.info(f"Updated Python path: {sys.path}")
+logger.info(f"Current directory contents: {os.listdir(current_dir)}")
+
+# 现在尝试导入
+try:
+    from .workflow_processor import WorkflowProcessor
+except ImportError as e:
+    logger.error(f"Failed to import WorkflowProcessor: {e}")
+    logger.error(f"Traceback: {traceback.format_exc()}")
+    try:
+        from workflow_processor import WorkflowProcessor
+    except ImportError as e:
+        logger.error(f"Failed to import WorkflowProcessor (second attempt): {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise
+
+import redis
+from urllib.parse import urlparse
 
 # 加载环境变量
 load_dotenv()

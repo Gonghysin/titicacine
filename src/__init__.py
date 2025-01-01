@@ -1,2 +1,7 @@
-# 这是一个空的 __init__.py 文件
-# 它使 src 目录成为一个 Python 包
+"""
+YouTube 视频转文章 API 服务
+"""
+
+from .workflow_processor import WorkflowProcessor
+
+__all__ = ['WorkflowProcessor']
