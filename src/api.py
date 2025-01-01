@@ -1,5 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import os
 from dotenv import load_dotenv
@@ -19,14 +21,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 挂载静态文件目录
+app.mount("/static", StaticFiles(directory="src/static"), name="static")
+
 @app.get("/")
 async def read_root():
-    """测试接口"""
-    return {
-        "status": "ok",
-        "message": "API 服务正常运行",
-        "version": "1.0.0"
-    }
+    """返回前端页面"""
+    return FileResponse('src/static/index.html')
 
 class ProcessRequest(BaseModel):
     topic: str
@@ -38,7 +39,7 @@ async def process_video(request: ProcessRequest):
     try:
         return {
             "status": "success",
-            "message": "API 接口正常",
+            "message": "请求已接收",
             "request": request.dict()
         }
     except Exception as e:
