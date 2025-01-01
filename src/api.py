@@ -5,12 +5,19 @@ import os
 import uuid
 import json
 from dotenv import load_dotenv
+import sys
+import logging
+import traceback
+from pathlib import Path
+
+# 添加 src 目录到 Python 路径
+current_dir = Path(__file__).parent
+if str(current_dir) not in sys.path:
+    sys.path.append(str(current_dir))
+
 from workflow_processor import WorkflowProcessor
 import redis
 from urllib.parse import urlparse
-import logging
-import traceback
-import sys
 
 # 配置日志
 logging.basicConfig(
@@ -18,6 +25,11 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# 记录 Python 路径
+logger.info(f"Python path: {sys.path}")
+logger.info(f"Current directory: {os.getcwd()}")
+logger.info(f"Directory contents: {os.listdir('.')}")
 
 # 加载环境变量
 load_dotenv()
