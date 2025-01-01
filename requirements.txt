@@ -4,16 +4,20 @@ uvicorn==0.22.0
 
 # API Clients
 openai==0.28.1
+youtube-search-python==1.6.6
+yt-dlp==2023.11.16
 
 # Utils
 python-dotenv==1.0.0
 requests==2.31.0
+pydub==0.25.1
 
 # Core Dependencies
 pydantic==1.10.13
 
-# Redis
-redis==5.0.1
-
 # LangChain
 langchain==0.0.284
+langchain-openai==0.0.2
+
+# Redis
+redis==5.0.1
