@@ -1,7 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from src.workflow_processor import WorkflowProcessor
 import os
 from dotenv import load_dotenv
 
@@ -20,31 +19,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+async def read_root():
+    """测试接口"""
+    return {
+        "status": "ok",
+        "message": "API 服务正常运行",
+        "openai_key": os.getenv("OPENAI_API_KEY", "")[:10] + "...",
+        "deepseek_key": os.getenv("DEEPSEEK_API_KEY", "")[:10] + "..."
+    }
+
 class ProcessRequest(BaseModel):
     topic: str
     mode: str = "1"
 
-@app.get("/")
-async def read_root():
-    return {"message": "欢迎使用 YouTube 视频转文章 API"}
-
 @app.post("/process")
 async def process_video(request: ProcessRequest):
+    """处理视频接口"""
     try:
-        # 初始化处理器
-        processor = WorkflowProcessor()
-        
-        # 处理视频
-        result = processor.process_workflow(request.topic, request.mode)
-        
-        if result:
-            return {
-                "status": "success",
-                "message": "处理完成",
-                "result": result
-            }
-        else:
-            raise HTTPException(status_code=500, detail="处理失败")
-            
+        return {
+            "status": "success",
+            "message": "API 接口正常",
+            "request": request.dict()
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) 
