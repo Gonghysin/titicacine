@@ -1,7 +1,7 @@
 # Web Framework
-fastapi==0.88.0
-uvicorn==0.20.0
-starlette==0.22.0
+fastapi==0.78.0
+uvicorn==0.18.3
+starlette==0.19.1
 
 # API Clients
 openai==0.28.1
@@ -14,8 +14,8 @@ requests==2.31.0
 pydub==0.25.1
 
 # Core Dependencies
-pydantic==1.10.13
-typing-extensions==4.5.0
+pydantic==1.9.2
+typing-extensions==4.3.0
 
 # LangChain
 langchain==0.0.284
