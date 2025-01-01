@@ -21,3 +21,6 @@ pydub==0.25.1
 
 # LangChain
 langchain_openai==0.0.2.post1
+
+# Redis
+redis==5.0.1
