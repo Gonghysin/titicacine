@@ -18,3 +18,6 @@ pydantic-settings==2.0.3
 
 # Audio Processing
 pydub==0.25.1
+
+# LangChain
+langchain_openai==0.0.2.post1
