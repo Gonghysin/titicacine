@@ -21,29 +21,32 @@ logger = logging.getLogger(__name__)
 logger.info(f"Current file: {__file__}")
 logger.info(f"Current directory: {os.getcwd()}")
 logger.info(f"Directory contents: {os.listdir(os.getcwd())}")
+
+# 添加 src 目录到 Python 路径
+try:
+    if '/var/task' in os.getcwd():  # Vercel 环境
+        sys.path.append('/var/task/src')
+    else:  # 本地环境
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        sys.path.append(current_dir)
+except Exception as e:
+    logger.error(f"Failed to set Python path: {e}")
+
 logger.info(f"Python path: {sys.path}")
 
-# 添加当前目录到 Python 路径
-current_file = Path(__file__)
-current_dir = current_file.parent
-project_root = current_dir.parent
-sys.path.extend([str(current_dir), str(project_root)])
-
-logger.info(f"Updated Python path: {sys.path}")
-logger.info(f"Current directory contents: {os.listdir(current_dir)}")
-
-# 现在尝试导入
+# 导入 WorkflowProcessor
 try:
-    from .workflow_processor import WorkflowProcessor
+    if os.path.exists(os.path.join(os.getcwd(), 'src', 'workflow_processor.py')):
+        logger.info("Found workflow_processor.py in src directory")
+    else:
+        logger.error("workflow_processor.py not found in src directory")
+        
+    from workflow_processor import WorkflowProcessor
+    logger.info("Successfully imported WorkflowProcessor")
 except ImportError as e:
     logger.error(f"Failed to import WorkflowProcessor: {e}")
     logger.error(f"Traceback: {traceback.format_exc()}")
-    try:
-        from workflow_processor import WorkflowProcessor
-    except ImportError as e:
-        logger.error(f"Failed to import WorkflowProcessor (second attempt): {e}")
-        logger.error(f"Traceback: {traceback.format_exc()}")
-        raise
+    raise
 
 import redis
 from urllib.parse import urlparse

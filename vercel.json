@@ -2,26 +2,14 @@
     "version": 2,
     "builds": [
         {
-            "src": "src/static/**",
-            "use": "@vercel/static"
-        },
-        {
             "src": "src/api.py",
             "use": "@vercel/python"
         }
     ],
     "routes": [
         {
-            "src": "/api/(.*)",
-            "dest": "src/api.py"
-        },
-        {
             "src": "/(.*)",
-            "dest": "src/static/$1"
+            "dest": "src/api.py"
         }
-    ],
-    "env": {
-        "PYTHONPATH": ".",
-        "PYTHONUNBUFFERED": "1"
-    }
+    ]
 } 
