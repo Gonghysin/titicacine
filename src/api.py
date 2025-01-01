@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
@@ -8,6 +8,11 @@ from dotenv import load_dotenv
 from workflow_processor import WorkflowProcessor
 import redis
 from urllib.parse import urlparse
+import logging
+
+# 配置日志
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # 加载环境变量
 load_dotenv()
@@ -15,12 +20,20 @@ load_dotenv()
 # Redis 连接
 redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
 url = urlparse(redis_url)
-redis_client = redis.Redis(
-    host=url.hostname,
-    port=url.port,
-    password=url.password,
-    ssl=True if url.scheme == 'rediss' else False
-)
+try:
+    redis_client = redis.Redis(
+        host=url.hostname,
+        port=url.port,
+        password=url.password,
+        ssl=True if url.scheme == 'rediss' else False,
+        decode_responses=True  # 自动解码响应
+    )
+    # 测试连接
+    redis_client.ping()
+    logger.info("Redis connection successful")
+except Exception as e:
+    logger.error(f"Redis connection error: {str(e)}")
+    raise
 
 # 创建 FastAPI 应用
 app = FastAPI(title="YouTube 视频转文章 API")
@@ -47,14 +60,51 @@ class ProcessRequest(BaseModel):
     topic: str
     mode: str = "1"
 
+async def process_task(task_id: str, request: ProcessRequest):
+    """后台任务处理"""
+    try:
+        # 更新任务状态为处理中
+        task_data = {
+            "status": "processing",
+            "progress": 10,
+            "message": "正在处理任务...",
+            "topic": request.topic,
+            "mode": request.mode
+        }
+        redis_client.setex(f"task:{task_id}", 3600, json.dumps(task_data))
+        
+        # 处理任务
+        processor = WorkflowProcessor()
+        result = processor.process_workflow(request.topic, request.mode)
+        
+        # 更新任务状态为完成
+        task_data.update({
+            "status": "completed",
+            "progress": 100,
+            "message": "处理完成",
+            "result": result
+        })
+    except Exception as e:
+        logger.error(f"Task processing error: {str(e)}")
+        task_data = {
+            "status": "failed",
+            "progress": 0,
+            "message": f"处理失败: {str(e)}"
+        }
+    finally:
+        try:
+            redis_client.setex(f"task:{task_id}", 3600, json.dumps(task_data))
+        except Exception as e:
+            logger.error(f"Failed to update task status: {str(e)}")
+
 @app.post("/api/process")
-async def process_video(request: ProcessRequest):
+async def process_video(request: ProcessRequest, background_tasks: BackgroundTasks):
     """处理视频接口"""
     try:
         # 创建任务ID
         task_id = str(uuid.uuid4())
         
-        # 存储任务信息到 Redis
+        # 初始化任务状态
         task_data = {
             "status": "pending",
             "progress": 0,
@@ -62,26 +112,10 @@ async def process_video(request: ProcessRequest):
             "topic": request.topic,
             "mode": request.mode
         }
-        redis_client.setex(f"task:{task_id}", 3600, json.dumps(task_data))  # 1小时过期
+        redis_client.setex(f"task:{task_id}", 3600, json.dumps(task_data))
         
-        # 启动异步处理
-        processor = WorkflowProcessor()
-        try:
-            result = processor.process_workflow(request.topic, request.mode)
-            task_data.update({
-                "status": "completed",
-                "progress": 100,
-                "message": "处理完成",
-                "result": result
-            })
-        except Exception as e:
-            task_data.update({
-                "status": "failed",
-                "progress": 0,
-                "message": str(e)
-            })
-        finally:
-            redis_client.setex(f"task:{task_id}", 3600, json.dumps(task_data))
+        # 启动后台任务
+        background_tasks.add_task(process_task, task_id, request)
         
         return {
             "status": "success",
@@ -89,19 +123,27 @@ async def process_video(request: ProcessRequest):
             "task_id": task_id
         }
     except Exception as e:
+        logger.error(f"Failed to create task: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/status/{task_id}")
 async def get_task_status(task_id: str):
     """获取任务状态"""
-    task_data = redis_client.get(f"task:{task_id}")
-    if not task_data:
-        raise HTTPException(status_code=404, detail="任务不存在")
-        
-    task = json.loads(task_data)
-    return {
-        "status": task["status"],
-        "progress": task["progress"],
-        "message": task["message"],
-        "result": task.get("result")
-    } 
+    try:
+        task_data = redis_client.get(f"task:{task_id}")
+        if not task_data:
+            raise HTTPException(status_code=404, detail="任务不存在")
+            
+        task = json.loads(task_data)
+        return {
+            "status": task["status"],
+            "progress": task["progress"],
+            "message": task["message"],
+            "result": task.get("result")
+        }
+    except redis.RedisError as e:
+        logger.error(f"Redis error: {str(e)}")
+        raise HTTPException(status_code=500, detail="无法获取任务状态")
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error: {str(e)}")
+        raise HTTPException(status_code=500, detail="任务状态数据无效") 
