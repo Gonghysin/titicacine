@@ -25,8 +25,7 @@ async def read_root():
     return {
         "status": "ok",
         "message": "API 服务正常运行",
-        "openai_key": os.getenv("OPENAI_API_KEY", "")[:10] + "...",
-        "deepseek_key": os.getenv("DEEPSEEK_API_KEY", "")[:10] + "..."
+        "version": "1.0.0"
     }
 
 class ProcessRequest(BaseModel):
