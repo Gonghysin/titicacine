@@ -4,20 +4,17 @@ uvicorn==0.22.0
 
 # API Clients
 openai==0.28.1
-google-api-python-client==2.108.0
 
 # Utils
 python-dotenv==1.0.0
 requests==2.31.0
-yt-dlp==2023.11.16
 
 # Core Dependencies
 pydantic==1.10.13
-typing-inspect==0.8.0
-typing_extensions==4.5.0
 
 # Redis
 redis==5.0.1
 
-# LangChain (使用旧版本以确保兼容性)
-langchain==0.0.325
+# LangChain (最小化依赖)
+langchain-core==0.0.9
+langchain-openai==0.0.2

@@ -5,8 +5,9 @@
             "src": "src/api.py",
             "use": "@vercel/python",
             "config": {
-                "maxLambdaSize": "10mb",
-                "runtime": "python3.9"
+                "maxLambdaSize": "50mb",
+                "runtime": "python3.9",
+                "excludeFiles": ["**/*.pyc", "**/__pycache__/**"]
             }
         }
     ],
@@ -17,6 +18,8 @@
         }
     ],
     "env": {
-        "PYTHONPATH": "."
+        "PYTHONPATH": ".",
+        "PIP_NO_DEPS": "false",
+        "PIP_DISABLE_PIP_VERSION_CHECK": "1"
     }
 } 
