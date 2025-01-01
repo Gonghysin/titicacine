@@ -3,124 +3,242 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube 视频转文章生成器</title>
+    <title>YouTube 视频转文章</title>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-family: Arial, sans-serif;
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
-            background: #f5f5f5;
+            background-color: #f5f5f5;
         }
         .container {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        h1 {
-            color: #333;
-            text-align: center;
-            margin-bottom: 30px;
-        }
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         label {
             display: block;
-            margin-bottom: 8px;
-            color: #555;
+            margin-bottom: 5px;
+            font-weight: bold;
         }
         input[type="text"], select {
             width: 100%;
-            padding: 10px;
+            padding: 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            font-size: 16px;
+            box-sizing: border-box;
         }
         button {
-            background: #007bff;
+            background-color: #4CAF50;
             color: white;
+            padding: 10px 20px;
             border: none;
-            padding: 12px 24px;
             border-radius: 4px;
             cursor: pointer;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .progress-container {
+            margin-top: 20px;
+            display: none;
+        }
+        .progress-bar {
             width: 100%;
-            font-size: 16px;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
         }
-        button:hover {
-            background: #0056b3;
+        .progress {
+            width: 0%;
+            height: 100%;
+            background-color: #4CAF50;
+            transition: width 0.3s ease;
         }
-        #result {
+        .status {
+            margin-top: 10px;
+            font-style: italic;
+        }
+        .result {
             margin-top: 20px;
             padding: 15px;
+            border: 1px solid #ddd;
             border-radius: 4px;
             white-space: pre-wrap;
+            display: none;
         }
-        .success {
-            background: #d4edda;
-            color: #155724;
+        .log-container {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+            max-height: 300px;
+            overflow-y: auto;
         }
-        .error {
-            background: #f8d7da;
-            color: #721c24;
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        .log-entry.success {
+            color: #28a745;
+        }
+        .log-entry.warning {
+            color: #ffc107;
+        }
+        .log-entry.error {
+            color: #dc3545;
+        }
+        .log-entry.info {
+            color: #17a2b8;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>YouTube 视频转文章生成器</h1>
+        <h1>YouTube 视频转文章</h1>
+        
         <div class="form-group">
-            <label for="topic">输入主题：</label>
-            <input type="text" id="topic" placeholder="例如：苏州男生脱单">
+            <label for="topic">视频主题：</label>
+            <input type="text" id="topic" placeholder="请输入想要的视频主题">
         </div>
+        
         <div class="form-group">
-            <label for="mode">选择模式：</label>
+            <label for="mode">生成模式：</label>
             <select id="mode">
                 <option value="1">公众号文章</option>
-                <option value="2">文本草稿</option>
+                <option value="2">文字稿</option>
             </select>
         </div>
-        <button onclick="generateArticle()">开始生成</button>
-        <div id="result"></div>
+        
+        <button id="submit" onclick="startProcess()">开始处理</button>
+        
+        <div id="progressContainer" class="progress-container">
+            <div class="progress-bar">
+                <div id="progress" class="progress"></div>
+            </div>
+            <div id="status" class="status">准备中...</div>
+            <div id="logContainer" class="log-container"></div>
+        </div>
+        
+        <pre id="result" class="result"></pre>
     </div>
 
     <script>
-        async function generateArticle() {
+        let currentTaskId = null;
+        let checkInterval = null;
+        let lastMessage = '';
+
+        function addLogEntry(message, type = 'info') {
+            const logContainer = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = message;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        async function startProcess() {
             const topic = document.getElementById('topic').value;
             const mode = document.getElementById('mode').value;
-            const resultDiv = document.getElementById('result');
             
             if (!topic) {
-                resultDiv.className = 'error';
-                resultDiv.textContent = '请输入主题！';
+                alert('请输入视频主题');
                 return;
             }
-
+            
+            // 禁用提交按钮
+            document.getElementById('submit').disabled = true;
+            
+            // 显示进度条和清空日志
+            document.getElementById('progressContainer').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+            document.getElementById('logContainer').innerHTML = '';
+            
             try {
-                resultDiv.className = '';
-                resultDiv.textContent = '正在处理中...';
-                
-                const response = await fetch('/process', {
+                // 发送请求
+                const response = await fetch('/api/process', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ topic, mode })
+                    body: JSON.stringify({
+                        topic: topic,
+                        mode: mode
+                    }),
                 });
-
-                const data = await response.json();
                 
-                if (response.ok) {
-                    resultDiv.className = 'success';
-                    resultDiv.textContent = `处理成功！\n${JSON.stringify(data, null, 2)}`;
-                } else {
-                    throw new Error(data.detail || '处理失败');
-                }
+                const data = await response.json();
+                currentTaskId = data.task_id;
+                addLogEntry('任务已创建，开始处理...', 'info');
+                
+                // 开始检查进度
+                checkProgress();
+                
             } catch (error) {
-                resultDiv.className = 'error';
-                resultDiv.textContent = `错误：${error.message}`;
+                console.error('Error:', error);
+                addLogEntry('处理出错: ' + error.message, 'error');
+                document.getElementById('submit').disabled = false;
             }
+        }
+
+        async function checkProgress() {
+            if (!currentTaskId) return;
+            
+            // 清除之前的定时器
+            if (checkInterval) {
+                clearInterval(checkInterval);
+            }
+            
+            // 设置新的定时器
+            checkInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/api/status/${currentTaskId}`);
+                    const data = await response.json();
+                    
+                    // 更新进度条
+                    document.getElementById('progress').style.width = `${data.progress * 100}%`;
+                    document.getElementById('status').textContent = data.message;
+                    
+                    // 如果消息变化了，添加到日志
+                    if (data.message !== lastMessage) {
+                        let type = 'info';
+                        if (data.message.includes('✓')) type = 'success';
+                        if (data.message.includes('⚠️')) type = 'warning';
+                        if (data.message.includes('❌')) type = 'error';
+                        addLogEntry(data.message, type);
+                        lastMessage = data.message;
+                    }
+                    
+                    // 如果处理完成或失败
+                    if (data.status === 'completed' || data.status === 'failed') {
+                        clearInterval(checkInterval);
+                        document.getElementById('submit').disabled = false;
+                        
+                        if (data.status === 'completed' && data.result) {
+                            document.getElementById('result').textContent = data.result;
+                            document.getElementById('result').style.display = 'block';
+                            addLogEntry('✅ 处理完成！', 'success');
+                        } else if (data.status === 'failed') {
+                            addLogEntry('❌ 处理失败：' + data.message, 'error');
+                        }
+                    }
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    clearInterval(checkInterval);
+                    addLogEntry('检查进度出错: ' + error.message, 'error');
+                    document.getElementById('submit').disabled = false;
+                }
+            }, 1000);
         }
     </script>
 </body>

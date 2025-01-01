@@ -27,19 +27,19 @@ app.mount("/static", StaticFiles(directory="src/static"), name="static")
 @app.get("/")
 async def read_root():
     """返回前端页面"""
-    return FileResponse('src/static/index.html')
+    return FileResponse("src/static/index.html")
 
 class ProcessRequest(BaseModel):
     topic: str
     mode: str = "1"
 
-@app.post("/process")
+@app.post("/api/process")
 async def process_video(request: ProcessRequest):
     """处理视频接口"""
     try:
         return {
             "status": "success",
-            "message": "请求已接收",
+            "message": "API 接口正常",
             "request": request.dict()
         }
     except Exception as e:
