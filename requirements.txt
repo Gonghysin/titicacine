@@ -13,8 +13,8 @@ google-auth-httplib2==0.1.1
 python-dotenv==1.0.0
 requests==2.31.0
 yt-dlp==2023.11.16
-pydantic==1.10.13
-pydantic-settings==2.0.3
+pydantic==2.5.2
+pydantic-core==2.14.5
 
 # Audio Processing
 pydub==0.25.1
