@@ -1,6 +1,6 @@
 # Web Framework
-fastapi==0.104.1
-uvicorn==0.24.0
+fastapi==0.95.2
+uvicorn==0.22.0
 python-multipart==0.0.6
 
 # API Clients
@@ -13,15 +13,12 @@ google-auth-httplib2==0.1.1
 python-dotenv==1.0.0
 requests==2.31.0
 yt-dlp==2023.11.16
-pydantic==2.5.2
-pydantic-core==2.14.5
+pydantic==1.10.12
 
 # Audio Processing
 pydub==0.25.1
 
 # LangChain
-langchain==0.0.352
-langchain-core==0.0.12
 langchain-openai==0.0.2
 
 # Redis
