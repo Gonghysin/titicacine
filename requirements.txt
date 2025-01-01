@@ -16,9 +16,8 @@ pydub==0.25.1
 pydantic==1.10.13
 
 # LangChain
-langchain==0.0.352
-langchain-community==0.0.13
-langchain-core==0.1.7
+langchain-core==0.0.9
+langchain-openai==0.0.2
 
 # Redis
 redis==5.0.1
