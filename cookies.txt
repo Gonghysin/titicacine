@@ -1,0 +1,3 @@
+# YouTube cookies file
+# This is an empty cookies file
+# You can add your cookies here if needed 
