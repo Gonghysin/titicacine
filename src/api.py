@@ -1,7 +1,5 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import os
 from dotenv import load_dotenv
@@ -21,13 +19,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 挂载静态文件目录
-app.mount("/static", StaticFiles(directory="src/static"), name="static")
-
-@app.get("/")
+@app.get("/api")
 async def read_root():
-    """返回前端页面"""
-    return FileResponse("src/static/index.html")
+    """API 状态检查"""
+    return {
+        "status": "ok",
+        "message": "API 服务正常运行",
+        "version": "1.0.0"
+    }
 
 class ProcessRequest(BaseModel):
     topic: str
