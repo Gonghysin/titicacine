@@ -163,6 +163,8 @@
             document.getElementById('result').style.display = 'none';
             document.getElementById('logContainer').innerHTML = '';
             
+            addLogEntry('开始发送请求...', 'info');
+            
             try {
                 // 发送请求
                 const response = await fetch('/api/process', {
@@ -176,22 +178,33 @@
                     }),
                 });
                 
-                const data = await response.json();
-                currentTaskId = data.task_id;
-                addLogEntry('任务已创建，开始处理...', 'info');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 
-                // 开始检查进度
-                checkProgress();
+                const data = await response.json();
+                addLogEntry(`收到服务器响应: ${JSON.stringify(data)}`, 'info');
+                
+                if (data.status === 'success') {
+                    currentTaskId = data.task_id;
+                    addLogEntry('任务已创建，开始处理...', 'success');
+                    checkProgress();
+                } else {
+                    throw new Error(data.message || '创建任务失败');
+                }
                 
             } catch (error) {
                 console.error('Error:', error);
-                addLogEntry('处理出错: ' + error.message, 'error');
+                addLogEntry(`处理出错: ${error.message}`, 'error');
                 document.getElementById('submit').disabled = false;
             }
         }
 
         async function checkProgress() {
-            if (!currentTaskId) return;
+            if (!currentTaskId) {
+                addLogEntry('没有正在进行的任务', 'warning');
+                return;
+            }
             
             // 清除之前的定时器
             if (checkInterval) {
@@ -201,7 +214,13 @@
             // 设置新的定时器
             checkInterval = setInterval(async () => {
                 try {
+                    addLogEntry('正在检查任务状态...', 'info');
                     const response = await fetch(`/api/status/${currentTaskId}`);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
                     const data = await response.json();
                     
                     // 更新进度条
@@ -228,14 +247,14 @@
                             document.getElementById('result').style.display = 'block';
                             addLogEntry('✅ 处理完成！', 'success');
                         } else if (data.status === 'failed') {
-                            addLogEntry('❌ 处理失败：' + data.message, 'error');
+                            addLogEntry(`❌ 处理失败：${data.message}`, 'error');
                         }
                     }
                     
                 } catch (error) {
                     console.error('Error:', error);
                     clearInterval(checkInterval);
-                    addLogEntry('检查进度出错: ' + error.message, 'error');
+                    addLogEntry(`检查进度出错: ${error.message}`, 'error');
                     document.getElementById('submit').disabled = false;
                 }
             }, 1000);

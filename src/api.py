@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
+import uuid
 from dotenv import load_dotenv
 
 # 加载环境变量
@@ -18,6 +19,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 模拟任务存储
+tasks = {}
 
 @app.get("/api")
 async def read_root():
@@ -36,10 +40,35 @@ class ProcessRequest(BaseModel):
 async def process_video(request: ProcessRequest):
     """处理视频接口"""
     try:
+        # 创建任务ID
+        task_id = str(uuid.uuid4())
+        
+        # 存储任务信息
+        tasks[task_id] = {
+            "status": "pending",
+            "progress": 0,
+            "message": "任务已创建",
+            "topic": request.topic,
+            "mode": request.mode
+        }
+        
         return {
             "status": "success",
-            "message": "API 接口正常",
-            "request": request.dict()
+            "message": "任务已创建",
+            "task_id": task_id
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) 
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/status/{task_id}")
+async def get_task_status(task_id: str):
+    """获取任务状态"""
+    if task_id not in tasks:
+        raise HTTPException(status_code=404, detail="任务不存在")
+        
+    task = tasks[task_id]
+    return {
+        "status": task["status"],
+        "progress": task["progress"],
+        "message": task["message"]
+    } 
