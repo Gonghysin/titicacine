@@ -1,13 +1,13 @@
 # Web Framework
-fastapi==0.95.0
-uvicorn[standard]==0.21.1
-starlette==0.26.1
-pydantic==1.10.7
+fastapi>=0.68.0,<0.69.0
+uvicorn[standard]>=0.15.0,<0.16.0
+starlette>=0.14.2,<0.15.0
+pydantic>=1.8.0,<2.0.0
 
 # ASGI
-h11==0.14.0
-websockets==10.4
-python-dotenv==0.21.1
+h11>=0.12.0,<0.13.0
+websockets>=10.0,<11.0
+python-dotenv>=0.19.0,<0.20.0
 
 # API Clients
 openai==1.2.3
@@ -22,7 +22,7 @@ ffmpeg-python==0.2.0
 redis==4.5.4
 celery==5.2.7
 flower==1.2.0
-requests==2.28.2
+requests>=2.26.0,<3.0.0
 
 # Task Queue
 amqp==5.1.1
