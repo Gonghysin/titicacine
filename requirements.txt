@@ -1,10 +1,11 @@
 # Web Framework
-fastapi==0.61.1
-hypercorn==0.11.2
-starlette==0.13.6
-pydantic==1.7.3
+fastapi==0.104.1
+hypercorn==0.14.4
+starlette==0.27.0
+pydantic==2.4.2
+typing-extensions==4.8.0
 
 # ASGI
-h11==0.9.0
-wsproto==0.15.0
+h11==0.14.0
+wsproto==1.2.0
 toml==0.10.2
