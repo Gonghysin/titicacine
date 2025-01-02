@@ -1,12 +1,18 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from starlette.responses import JSONResponse
+from pydantic import BaseModel
 import logging
+import uuid
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+class ProcessRequest(BaseModel):
+    topic: str
+    mode: str = "1"
 
 app = FastAPI()
 
@@ -32,6 +38,26 @@ async def check_api():
         "status": "ok",
         "message": "API 服务正常运行"
     }
+
+@app.post("/api/process")
+async def process_video(request: ProcessRequest):
+    """处理视频接口"""
+    try:
+        # 导入处理器（延迟导入以减少启动时间）
+        from workflow_processor import WorkflowProcessor
+        processor = WorkflowProcessor()
+        
+        # 开始处理
+        result = processor.process_workflow(request.topic, request.mode)
+        
+        return {
+            "status": "success",
+            "message": "处理完成",
+            "result": result
+        }
+    except Exception as e:
+        logger.error(f"处理失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/health")
 async def health_check():

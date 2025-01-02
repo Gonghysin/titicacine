@@ -9,3 +9,13 @@ typing-extensions==4.8.0
 h11==0.14.0
 wsproto==1.2.0
 toml==0.10.2
+
+# API Clients
+openai==0.27.8
+youtube-search-python==1.6.6
+yt-dlp==2023.3.4
+
+# Utils
+python-dotenv==0.19.2
+requests==2.27.1
+pydub==0.25.1
