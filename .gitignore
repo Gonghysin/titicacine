@@ -1,10 +1,14 @@
+# Virtual Environment
+.venv/
+venv/
+ENV/
+
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-env/
 build/
 develop-eggs/
 dist/
@@ -16,14 +20,10 @@ lib64/
 parts/
 sdist/
 var/
+wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-
-# Virtual Environment
-venv/
-ENV/
-py39env/
 
 # IDE
 .idea/
@@ -31,17 +31,21 @@ py39env/
 *.swp
 *.swo
 
-# Project specific
-.env
-downloads/
-data/articles/*
-!data/articles/.gitkeep
-
 # Logs
 *.log
 logs/
-celerybeat-schedule
-celerybeat.pid
+log/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
 
 # Vercel
-.vercel/ 
+.vercel/
+.now/
+.pip/
+
+# Project specific
+data/
+downloads/ 
