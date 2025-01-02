@@ -1,23 +1,26 @@
 # Web Framework
-fastapi==0.104.1
-hypercorn==0.14.4
-starlette==0.27.0
-pydantic==2.4.2
-typing-extensions==4.8.0
+fastapi==0.95.2
+hypercorn==0.14.3
+starlette==0.26.1
+pydantic==1.10.7
+typing-extensions==4.5.0
 
 # ASGI
 h11==0.14.0
 wsproto==1.2.0
 toml==0.10.2
 
+# LangChain
+langchain==0.0.352
+langchain-core==0.0.10
+langchain-openai==0.0.2
+
 # API Clients
-openai==0.27.8
+openai==0.28.1
 youtube-search-python==1.6.6
 yt-dlp==2023.3.4
-langchain-openai==0.0.2
-langchain-core==0.1.0
 
 # Utils
 python-dotenv==0.19.2
-requests==2.27.1
+requests==2.28.2
 pydub==0.25.1
