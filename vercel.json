@@ -3,9 +3,10 @@
     "builds": [
         {
             "src": "src/api.py",
-            "use": "@vercel/python@3.0.0",
+            "use": "@vercel/python",
             "config": {
-                "runtime": "python3.9"
+                "runtime": "python3.9",
+                "installCommand": "python -m pip install -r requirements.txt"
             }
         }
     ],
