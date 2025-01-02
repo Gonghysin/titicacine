@@ -1,20 +1,14 @@
 # Web Framework
-fastapi>=0.68.0,<0.69.0
+fastapi>=0.89.1
 uvicorn>=0.15.0,<0.16.0
-starlette>=0.14.2,<0.15.0
-pydantic>=1.8.0,<2.0.0
+starlette>=0.22.0
+pydantic>=2.7.4,<3.0.0
 
 # ASGI
 h11>=0.12.0,<0.13.0
 websockets>=10.0,<11.0
 python-dotenv>=0.19.0,<0.20.0
 aiofiles>=0.8.0,<0.9.0
-
-# LangChain
-langchain>=0.0.352
-langchain-openai>=0.0.2
-langchain-community>=0.0.1
-langchain-core>=0.1.0
 
 # API Clients
 openai==1.2.3

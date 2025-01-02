@@ -1,26 +1,30 @@
 #!/bin/bash
 
-# 定义颜色
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
+# 定义变量
+SERVER="root@45.192.101.86"
+PORT="17471"
 
-echo -e "${RED}停止 YouTube 视频转文章服务...${NC}"
+# 连接到服务器并停止服务
+ssh -p $PORT $SERVER << 'EOF'
+cd /var/www/myproject
 
-# 停止 API 服务
-echo -e "${GREEN}1. 停止 API 服务...${NC}"
-pkill -f "python src/run_api.py"
+echo "正在停止服务..."
 
-# 停止 Flower
-echo -e "${GREEN}2. 停止 Flower 监控...${NC}"
-pkill -f "celery.*flower"
+# 停止 FastAPI 服务
+pkill -f "uvicorn main:app" || true
+echo "FastAPI 服务已停止"
 
 # 停止 Celery Worker
-echo -e "${GREEN}3. 停止 Celery Worker...${NC}"
-pkill -f "python src/run_worker.py"
+pkill -f "celery worker" || true
+echo "Celery worker 已停止"
 
-# 停止 Redis
-echo -e "${GREEN}4. 停止 Redis 服务器...${NC}"
-redis-cli shutdown
+# 停止 Flower 监控
+pkill -f "flower" || true
+echo "Flower 监控已停止"
 
-echo -e "\n${GREEN}所有服务已停止${NC}" 
+# 验证服务是否已停止
+echo "检查服务状态..."
+ps aux | grep -E "uvicorn|celery|flower"
+
+echo "所有服务已停止！"
+EOF 

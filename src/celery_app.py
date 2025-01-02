@@ -6,14 +6,18 @@ from dotenv import load_dotenv
 # 加载环境变量
 load_dotenv()
 
-# 创建 Celery 实例
+# 获取Redis URL
+redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
+
+# 创建Celery实例
 celery_app = Celery(
     'youtube_to_article',
-    broker=os.getenv('REDIS_URL', 'redis://localhost:6379/0'),
-    backend=os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+    broker=redis_url,
+    backend=redis_url,
+    broker_connection_retry_on_startup=True
 )
 
-# Celery 配置
+# 配置Celery
 celery_app.conf.update(
     task_serializer='json',
     accept_content=['json'],
