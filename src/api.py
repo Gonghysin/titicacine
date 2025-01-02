@@ -5,6 +5,13 @@ from starlette.responses import JSONResponse
 from pydantic import BaseModel
 import logging
 import uuid
+import sys
+import os
+
+# 添加当前目录到 Python 路径
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.append(current_dir)
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
@@ -44,7 +51,7 @@ async def process_video(request: ProcessRequest):
     """处理视频接口"""
     try:
         # 导入处理器（延迟导入以减少启动时间）
-        from workflow_processor import WorkflowProcessor
+        from .workflow_processor import WorkflowProcessor
         processor = WorkflowProcessor()
         
         # 开始处理
