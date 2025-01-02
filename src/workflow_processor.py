@@ -3,8 +3,6 @@ import os
 import json
 from openai import OpenAI
 from typing import Dict, Any, List, Optional, Callable
-from langchain_openai import ChatOpenAI
-from langchain.schema import HumanMessage, SystemMessage
 from youtube_search import YoutubeSearch
 from yt_dlp import YoutubeDL
 import requests
@@ -64,7 +62,7 @@ class WorkflowProcessor:
             raise Exception(f"选择视频时出错: {str(e)}")
 
     def generate_article(self, video_info: Dict[str, Any], transcript: str) -> str:
-        """生成文章，使用 ft-gpt4 模型"""
+        """生成文章，使用 OpenAI API"""
         try:
             # 预处理转录文本
             print("预处理转录文本...")
@@ -130,10 +128,17 @@ class WorkflowProcessor:
             请生成文章：
             """
             
-            # 使用 ft-gpt4 模型生成文章
-            print("使用 ft-gpt4 模型生成文章...")
-            messages = [
-                {"role": "system", "content": """你是一个专业的文章写手，擅长将视频内容转换为公众号文章。你有以下特点：
+            # 使用 OpenAI API 生成文章
+            print("使用 OpenAI API 生成文章...")
+            client = OpenAI()
+            
+            # 最多尝试3次生成合适长度的文章
+            last_article = None
+            for attempt in range(3):
+                response = client.chat.completions.create(
+                    model="gpt-4-1106-preview",
+                    messages=[
+                        {"role": "system", "content": """你是一个专业的文章写手，擅长将视频内容转换为公众号文章。你有以下特点：
 
 1. 字数控制能力极强（最重要）：
    - 你总是确保文章总字数在1000-1500字之间，这是硬性要求
@@ -166,13 +171,13 @@ class WorkflowProcessor:
    - 语言流畅自然
    - 避免内容重复
    - 适当使用数据和例子"""},
-                {"role": "user", "content": prompt}
-            ]
-            
-            # 最多尝试3次生成合适长度的文章
-            last_article = None
-            for attempt in range(3):
-                article = self.openai_helper.generate_response(messages, model_key="ft-gpt4")
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0.7,
+                    max_tokens=2000
+                )
+                
+                article = response.choices[0].message.content
                 if not article or len(article.strip()) < 10:  # 如果生成的文章为空或太短
                     print(f"第{attempt + 1}次尝试生成的文章无效，重新生成...")
                     continue
@@ -190,7 +195,7 @@ class WorkflowProcessor:
                 
                 # 添加字数控制提示
                 if word_count < 1000:
-                    messages.append({"role": "user", "content": f"""
+                    prompt += f"""
                     生成的文章字数不足（{word_count}字），请按照以下要求重新生成：
                     1. 总字数必须在1000-1500字之间
                     2. 可以通过以下方式扩充内容：
@@ -199,9 +204,9 @@ class WorkflowProcessor:
                        - 补充相关数据
                     3. 保持原有的结构和主要观点
                     4. 确保内容质量不降低
-                    """})
+                    """
                 else:
-                    messages.append({"role": "user", "content": f"""
+                    prompt += f"""
                     生成的文章字数过多（{word_count}字），请按照以下要求重新生成：
                     1. 总字数必须在1000-1500字之间
                     2. 可以通过以下方式精简内容：
@@ -210,7 +215,7 @@ class WorkflowProcessor:
                        - 使用更简洁的表达
                     3. 保持原有的结构和主要观点
                     4. 确保内容质量不降低
-                    """})
+                    """
             
             # 如果3次尝试都失败，返回最后一次有效的生成结果
             # 如果没有有效结果，则重新生成一篇基础文章
@@ -225,10 +230,16 @@ class WorkflowProcessor:
                 5. 总段落数不少于10个
                 6. 内容要有实质性
                 """
-                last_article = self.openai_helper.generate_response([
-                    {"role": "system", "content": "你是一个专业的文章写手，擅长生成基础文章。你总是严格控制文章字数在1000-1500字之间。"},
-                    {"role": "user", "content": base_prompt}
-                ], model_key="ft-gpt4")
+                response = client.chat.completions.create(
+                    model="gpt-4-1106-preview",
+                    messages=[
+                        {"role": "system", "content": "你是一个专业的文章写手，擅长生成基础文章。你总是严格控制文章字数在1000-1500字之间。"},
+                        {"role": "user", "content": base_prompt}
+                    ],
+                    temperature=0.7,
+                    max_tokens=2000
+                )
+                last_article = response.choices[0].message.content
             
             return last_article
             
