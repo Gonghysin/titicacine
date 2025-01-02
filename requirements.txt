@@ -1,7 +1,7 @@
 # Web Framework
-fastapi==0.70.1
+fastapi==0.68.2
 uvicorn==0.15.0
-starlette==0.16.0
+starlette==0.14.2
 
 # API Clients
 openai==0.27.8
@@ -16,9 +16,16 @@ pydub==0.25.1
 # Core Dependencies
 pydantic==1.8.2
 typing-extensions==3.10.0.2
+email-validator==1.1.3
 
 # LangChain
 langchain==0.0.200
 
 # Redis
 redis==4.5.5
+
+# Additional Dependencies
+python-multipart==0.0.5
+aiofiles==0.8.0
+httptools==0.3.0
+ujson==5.4.0
