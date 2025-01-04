@@ -2,18 +2,17 @@ import os
 import logging
 from typing import Optional, Dict, Any
 import subprocess
-import whisper
-import torch
+from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
 class VideoProcessor:
     def __init__(self):
         """初始化视频处理器"""
-        # 加载本地Whisper模型
-        self.model = whisper.load_model("base")
         self.max_audio_size = 25 * 1024 * 1024  # 25MB 最大音频大小
-        
+        self.client = OpenAI()
+        logger.info("初始化完成")
+
     async def process_video(self, bvid: str) -> Optional[str]:
         """
         处理视频：下载并提取音频
@@ -25,7 +24,7 @@ class VideoProcessor:
             
             # 1. 下载视频
             logger.info(f"开始下载视频: {bvid}")
-            from src.bilibili_helper import BilibiliHelper
+            from src.utils.bilibili_helper import BilibiliHelper
             helper = BilibiliHelper()
             video_info = await helper.download_video(bvid)
             
@@ -112,22 +111,23 @@ class VideoProcessor:
         except Exception as e:
             logger.error(f"处理视频时出错: {str(e)}")
             return None
-            
+
     def _transcribe_audio(self, audio_path: str) -> Optional[str]:
         """
-        使用本地Whisper模型转录音频
+        使用OpenAI API转录音频
         :param audio_path: 音频文件路径
         :return: 转录文本
         """
         try:
-            # 使用本地Whisper模型进行转录
-            result = self.model.transcribe(
-                audio_path,
-                language="zh",
-                task="transcribe",
-                fp16=torch.cuda.is_available()  # 如果有GPU则使用FP16
-            )
-            return result["text"]
+            # 使用OpenAI API进行转录
+            with open(audio_path, "rb") as audio_file:
+                transcript = self.client.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=audio_file,
+                    response_format="text",
+                    language="zh"
+                )
+            return transcript
                 
         except Exception as e:
             logger.error(f"转录音频时出错: {str(e)}")
