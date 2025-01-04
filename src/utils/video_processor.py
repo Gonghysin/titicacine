@@ -2,16 +2,16 @@ import os
 import logging
 from typing import Optional, Dict, Any
 import subprocess
-from openai import OpenAI, AsyncOpenAI
-import asyncio
-import backoff  # 添加重试机制
+import whisper
+import torch
 
 logger = logging.getLogger(__name__)
 
 class VideoProcessor:
     def __init__(self):
         """初始化视频处理器"""
-        self.client = AsyncOpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        # 加载本地Whisper模型
+        self.model = whisper.load_model("base")
         self.max_audio_size = 25 * 1024 * 1024  # 25MB 最大音频大小
         
     async def process_video(self, bvid: str) -> Optional[str]:
@@ -85,16 +85,20 @@ class VideoProcessor:
                     for file in sorted(os.listdir('downloads')):
                         if file.startswith(f"{bvid}_") and file.endswith('.mp3'):
                             segment_path = os.path.join('downloads', file)
-                            text = await self._transcribe_audio(segment_path)
-                            if text:
-                                texts.append(text)
-                            os.remove(segment_path)  # 删除分段文件
+                            try:
+                                text = self._transcribe_audio(segment_path)
+                                if text:
+                                    texts.append(text)
+                            except Exception as e:
+                                logger.error(f"转录分段音频失败: {str(e)}")
+                            finally:
+                                os.remove(segment_path)  # 删除分段文件
                     
                     if texts:
                         return "\n".join(texts)
                     return None
                 else:
-                    text = await self._transcribe_audio(audio_path)
+                    text = self._transcribe_audio(audio_path)
                     if text:
                         logger.info("音频转录完成")
                         return text
@@ -109,31 +113,22 @@ class VideoProcessor:
             logger.error(f"处理视频时出错: {str(e)}")
             return None
             
-    @backoff.on_exception(
-        backoff.expo,
-        Exception,
-        max_tries=5,  # 增加最大重试次数
-        max_time=600,  # 增加最大重试时间到10分钟
-        base=2,  # 指数退避的基数
-        factor=5  # 增加退避因子
-    )
-    async def _transcribe_audio(self, audio_path: str) -> Optional[str]:
+    def _transcribe_audio(self, audio_path: str) -> Optional[str]:
         """
-        使用OpenAI Whisper模型转录音频
+        使用本地Whisper模型转录音频
         :param audio_path: 音频文件路径
         :return: 转录文本
         """
         try:
-            with open(audio_path, "rb") as audio_file:
-                transcription = await self.client.audio.transcriptions.create(
-                    model="whisper-1",
-                    file=audio_file,
-                    response_format="text",
-                    language="zh",  # 指定中文以提高准确性
-                    timeout=300  # 设置5分钟超时
-                )
-                return transcription
+            # 使用本地Whisper模型进行转录
+            result = self.model.transcribe(
+                audio_path,
+                language="zh",
+                task="transcribe",
+                fp16=torch.cuda.is_available()  # 如果有GPU则使用FP16
+            )
+            return result["text"]
                 
         except Exception as e:
             logger.error(f"转录音频时出错: {str(e)}")
-            raise  # 抛出异常以触发重试机制 
+            return None 
