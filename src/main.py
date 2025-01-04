@@ -1,83 +1,122 @@
+from typing import Optional
+from src.workflow_processor import WorkflowProcessor
+import asyncio
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import logging
+import os
 import sys
-import argparse
-from workflow_processor import WorkflowProcessor
 
-def run_test_mode():
-    """运行测试模式"""
-    processor = WorkflowProcessor()
-    test_topics = [
-        "苏州男生脱单",
-        "微软与OpenAI的合作",
-        "人工智能的发展趋势"
-    ]
-    
-    for topic in test_topics:
-        print("\n==================================================")
-        print(f"测试主题: {topic}")
-        print("==================================================\n")
-        result = processor.process_workflow(topic, mode="1")
+# 配置日志
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+# 文件处理器
+file_handler = logging.FileHandler('app.log', mode='w')
+file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+logger.addHandler(file_handler)
+
+# 控制台处理器
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+logger.addHandler(console_handler)
+
+app = Flask(__name__)
+CORS(app)  # 启用 CORS 支持
+
+def generate_article(topic: str) -> str:
+    """生成文章的主函数"""
+    try:
+        logger.info(f"开始生成文章，主题: {topic}")
         
-        if "error" in result:
-            print(f"\n处理失败: {result['error']}")
+        # 创建工作流处理器
+        processor = WorkflowProcessor()
+        
+        # 使用异步方式处理主题
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+        result = loop.run_until_complete(processor.process_topic(topic))
+        
+        # 如果处理成功
+        if result and result.get('status') == 'success':
+            # 返回处理结果
+            video = result['video']
+            article = result['article']
+            keywords = result.get('keywords', [])
+            main_points = result.get('main_points', [])
+            insights = result.get('insights', [])
+            
+            logger.info(f"文章生成成功，视频标题: {video['title']}")
+            
+            # 格式化主要观点
+            points_text = "\n".join([f"- {point}" for point in main_points])
+            
+            # 格式化见解
+            insights_text = "\n".join([f"- {insight}" for insight in insights])
+            
+            return f"""# {topic}
+
+## 视频来源
+- 标题：{video['title']}
+- 链接：{video['url']}
+- 描述：{video['description']}
+
+## 关键词
+{', '.join(keywords)}
+
+## 主要观点
+{points_text}
+
+## 重要见解
+{insights_text}
+
+## 文章内容
+{article}
+"""
         else:
-            print(f"\n选择的视频: {result['video']['title']}")
-            print(f"视频链接: {result['video']['url']}")
-            print(f"文章已保存: {result.get('saved_path', '')}")
-            
-            if not result['validation_result']['is_valid']:
-                print(f"\n注意：{result['validation_result']['reason']}")
+            error_msg = result.get('error', '未知错误')
+            logger.error(f"处理失败: {error_msg}")
+            return f"处理失败: {error_msg}"
         
-        user_input = input("\n按Enter继续下一个测试，输入q退出...")
-        if user_input.lower() == 'q':
-            break
+    except Exception as e:
+        logger.error(f"生成文章时出错: {str(e)}")
+        return f"生成文章时出错: {str(e)}"
+    finally:
+        try:
+            loop.close()
+        except:
+            pass
 
-def run_interactive_mode():
-    """运行交互模式"""
-    processor = WorkflowProcessor()
-    
-    while True:
-        print("\n欢迎使用 YouTube 视频转文章服务！\n")
-        print("==================================================")
-        topic = input("请输入要处理的主题（输入q退出，输入test进入测试模式）: ").strip()
-        
-        if topic.lower() == 'q':
-            break
-        elif topic.lower() == 'test':
-            run_test_mode()
-            continue
+@app.route('/api/generate_article', methods=['POST'])
+def api_generate_article():
+    try:
+        logger.info("收到生成文章请求")
+        data = request.get_json()
+        if not data:
+            logger.error("无效的请求数据")
+            return jsonify({"error": "无效的请求数据"}), 400
             
-        mode = input("请选择处理模式（1: 生成公众号文章，2: 生成文本草稿）: ").strip()
-        if mode not in ['1', '2']:
-            print("无效的模式选择，请输入1或2")
-            continue
+        if 'title' not in data:
+            logger.error("缺少标题参数")
+            return jsonify({"error": "缺少标题参数"}), 400
             
-        result = processor.process_workflow(topic, mode)
+        title = data['title']
+        logger.info(f"开始处理标题: {title}")
         
-        if "error" in result:
-            print(f"\n处理失败: {result['error']}")
-        else:
-            print(f"\n选择的视频: {result['video']['title']}")
-            print(f"视频链接: {result['video']['url']}")
-            print(f"文章已保存: {result.get('saved_path', '')}")
-            
-            if not result['validation_result']['is_valid']:
-                print(f"\n注意：{result['validation_result']['reason']}")
+        article = generate_article(title)
+        logger.info("文章生成完成")
+        return jsonify({"article": article})
         
-        user_input = input("\n按Enter继续，输入q退出...")
-        if user_input.lower() == 'q':
-            break
+    except Exception as e:
+        logger.error(f"API错误: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
-def main():
-    """主函数"""
-    parser = argparse.ArgumentParser(description='YouTube视频转文章工具')
-    parser.add_argument('--test', action='store_true', help='运行测试模式')
-    args = parser.parse_args()
-    
-    if args.test:
-        print("\n进入测试模式...")
-        run_test_mode()
-    else:
-        run_interactive_mode()
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    # 使用环境变量或默认值设置端口
+    port = int(os.getenv('FLASK_PORT', 5002))
+    logger.info(f"启动Flask服务器，端口: {port}")
+    app.run(host='0.0.0.0', port=port, debug=True)
