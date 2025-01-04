@@ -8,26 +8,32 @@ import os
 import sys
 
 # 配置日志
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('app.log'),
+        logging.StreamHandler()
+    ]
+)
 
-# 文件处理器
-file_handler = logging.FileHandler('app.log', mode='w')
-file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-logger.addHandler(file_handler)
-
-# 控制台处理器
-console_handler = logging.StreamHandler(sys.stdout)
-console_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-logger.addHandler(console_handler)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-CORS(app)  # 启用 CORS 支持
+CORS(app)
 
-def generate_article(topic: str) -> str:
-    """生成文章的主函数"""
+@app.route('/api/generate_article', methods=['POST'])
+def generate_article_endpoint():
+    """处理生成文章的请求"""
     try:
-        logger.info(f"开始生成文章，主题: {topic}")
+        logger.info("收到生成文章请求")
+        data = request.get_json()
+        if not data or 'title' not in data:
+            logger.error("无效的请求数据")
+            return jsonify({"error": "无效的请求数据"}), 400
+            
+        title = data['title']
+        logger.info(f"开始处理标题: {title}")
         
         # 创建工作流处理器
         processor = WorkflowProcessor()
@@ -39,7 +45,7 @@ def generate_article(topic: str) -> str:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             
-        result = loop.run_until_complete(processor.process_topic(topic))
+        result = loop.run_until_complete(processor.process_topic(title))
         
         # 如果处理成功
         if result and result.get('status') == 'success':
@@ -58,65 +64,35 @@ def generate_article(topic: str) -> str:
             # 格式化见解
             insights_text = "\n".join([f"- {insight}" for insight in insights])
             
-            return f"""# {topic}
-
-## 视频来源
-- 标题：{video['title']}
-- 链接：{video['url']}
-- 描述：{video['description']}
-
-## 关键词
-{', '.join(keywords)}
-
-## 主要观点
-{points_text}
-
-## 重要见解
-{insights_text}
-
-## 文章内容
-{article}
-"""
+            response = {
+                "video": {
+                    "title": video['title'],
+                    "url": video['url'],
+                    "description": video['description']
+                },
+                "keywords": keywords,
+                "main_points": main_points,
+                "insights": insights,
+                "article": article
+            }
+            
+            return jsonify(response)
         else:
             error_msg = result.get('error', '未知错误')
             logger.error(f"处理失败: {error_msg}")
-            return f"处理失败: {error_msg}"
-        
+            return jsonify({"error": error_msg}), 500
+            
     except Exception as e:
-        logger.error(f"生成文章时出错: {str(e)}")
-        return f"生成文章时出错: {str(e)}"
+        logger.error(f"API错误: {str(e)}")
+        return jsonify({"error": str(e)}), 500
     finally:
         try:
             loop.close()
         except:
             pass
 
-@app.route('/api/generate_article', methods=['POST'])
-def api_generate_article():
-    try:
-        logger.info("收到生成文章请求")
-        data = request.get_json()
-        if not data:
-            logger.error("无效的请求数据")
-            return jsonify({"error": "无效的请求数据"}), 400
-            
-        if 'title' not in data:
-            logger.error("缺少标题参数")
-            return jsonify({"error": "缺少标题参数"}), 400
-            
-        title = data['title']
-        logger.info(f"开始处理标题: {title}")
-        
-        article = generate_article(title)
-        logger.info("文章生成完成")
-        return jsonify({"article": article})
-        
-    except Exception as e:
-        logger.error(f"API错误: {str(e)}")
-        return jsonify({"error": str(e)}), 500
-
 if __name__ == '__main__':
     # 使用环境变量或默认值设置端口
-    port = int(os.getenv('FLASK_PORT', 5002))
+    port = int(os.getenv('FLASK_PORT', 5001))
     logger.info(f"启动Flask服务器，端口: {port}")
     app.run(host='0.0.0.0', port=port, debug=True)
